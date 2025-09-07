@@ -35,6 +35,7 @@ Builder.load_string('''
             id: yes_button
             size_hint_min: self.texture_size
 ''')
+YesNoPopup = Factory.get('YesNoPopup')
 
 
 async def ask_yes_no_question(
@@ -50,7 +51,7 @@ async def ask_yes_no_question(
 
     :return: None if the popup is auto-dismissed.
     '''
-    popup = _cache.pop() if _cache else Factory.get('YesNoPopup')()
+    popup = _cache.pop() if _cache else YesNoPopup()
     try:
         ids = popup.ids
         ids.question.text = question

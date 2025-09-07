@@ -38,6 +38,7 @@ Builder.load_string('''
             id: ok_button
             size_hint_min: self.texture_size
 ''')
+PromptPopup = Factory.get('PromptPopup')
 
 
 async def ask_input(
@@ -54,7 +55,7 @@ async def ask_input(
 
     :return: None if the popup is auto-dismissed or the cancel button is tapped,
     '''
-    popup = _cache.pop() if _cache else Factory.get('PromptPopup')()
+    popup = _cache.pop() if _cache else PromptPopup()
     try:
         ids = popup.ids
         ids.label.text = message
