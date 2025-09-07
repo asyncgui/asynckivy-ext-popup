@@ -6,3 +6,4 @@ bin/
 /.pytest_cache/
 /dist
 /docs/
+/.vscode
