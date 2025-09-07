@@ -145,7 +145,7 @@ def main():
     from textwrap import dedent
     from kivy.lang import Builder
     from kivy.app import App
-    from yes_no_popup import ask_yes_no_question
+    from ask_yes_no_question import ask_yes_no_question
 
     class TestApp(App):
         def build(self):
