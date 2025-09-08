@@ -42,7 +42,7 @@ PromptPopup = Factory.get('PromptPopup')
 
 
 async def ask_input(
-    message: str, *, parent: WindowBase=Window, ok_text='OK', cancel_text='Cancel',
+    message: str, *, window: WindowBase=Window, ok_text='OK', cancel_text='Cancel',
     input_filter=TextInput.input_filter.defaultvalue, input_type=TextInput.input_type.defaultvalue,
     transition: Transition=FadeTransition(), auto_dismiss=True, _cache=[],
 ) -> Awaitable[None | str]:
@@ -66,7 +66,7 @@ async def ask_input(
         ti.input_filter = input_filter
         ti.input_type = input_type
         ti.focus = True
-        async with open_popup(popup, parent=parent, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
+        async with open_popup(popup, window=window, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
             tasks = await ak.wait_any(
                 ak.event(ti, 'on_text_validate'),
                 ak.event(ids.ok_button, 'on_release'),

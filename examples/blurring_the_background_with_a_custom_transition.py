@@ -50,23 +50,23 @@ class BlurTransition:
         self.blur_size = blur_size
 
     @asynccontextmanager
-    async def __call__(self, popup: Widget, bg, parent: WindowBase):
-        bg_canvas = bg.canvas.before
+    async def __call__(self, popup: Widget, parent, window: WindowBase):
+        bg_canvas = parent.canvas.before
         try:
-            bg.opacity = 0
-            dt = self.blur_size / 4.0 / bg.width
-            blurred_screen = capture_screen(parent, fragment_shader=fs_horizontal_blur.format(dt))
-            dt = self.blur_size / 4.0 / bg.height
+            parent.opacity = 0
+            dt = self.blur_size / 4.0 / parent.width
+            blurred_screen = capture_screen(window, fragment_shader=fs_horizontal_blur.format(dt))
+            dt = self.blur_size / 4.0 / parent.height
             blurred_screen = apply_fragment_shader(blurred_screen, fs_vertical_blur.format(dt))
             with bg_canvas:
                 Color()
                 rect = Rectangle(texture=blurred_screen)
-            with ak.sync_attr((bg, 'size'), (rect, 'size')):
-                await anim_attrs(bg, d=self.in_duration, opacity=1.0)
+            with ak.sync_attr((parent, 'size'), (rect, 'size')):
+                await anim_attrs(parent, d=self.in_duration, opacity=1.0)
                 yield
-                await anim_attrs(bg, d=self.out_duration, opacity=0.0)
+                await anim_attrs(parent, d=self.out_duration, opacity=0.0)
         finally:
-            bg.opacity = 1.0
+            parent.opacity = 1.0
             bg_canvas.clear()
 
 

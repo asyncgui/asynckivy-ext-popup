@@ -35,7 +35,7 @@ MessageBox = Factory.get('MessageBox')
 
 
 async def message_box(
-    message: str, *, parent: WindowBase=Window, ok_text='OK',
+    message: str, *, window: WindowBase=Window, ok_text='OK',
     transition: Transition=SlideTransition(), auto_dismiss=True, _cache=[],
 ) -> Awaitable[Literal[True, None]]:
     '''
@@ -50,7 +50,7 @@ async def message_box(
         ids = popup.ids
         ids.msg.text = message
         ids.ok_button.text = ok_text
-        async with open_popup(popup, parent=parent, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
+        async with open_popup(popup, window=window, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
             await ak.event(ids.ok_button, 'on_release')
         if ad_event.is_fired:
             return None
@@ -78,7 +78,6 @@ def main():
                         id: button
                         size_hint: .4, .2
                         size_hint_min: self.texture_size
-                        padding: '10dp'
                         text: "open popup"
                         on_release: ak.managed_start(message_box("The armor I used to seal my all too powerful strength is now broken."))
                 '''))

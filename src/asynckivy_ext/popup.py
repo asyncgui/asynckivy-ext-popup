@@ -3,8 +3,9 @@ __all__ = (
 )
 
 from typing import TypeAlias, Literal
+from functools import partial
 from collections.abc import Callable, AsyncIterator
-from contextlib import AsyncExitStack, contextmanager, asynccontextmanager, AbstractAsyncContextManager as AACM
+from contextlib import AsyncExitStack, contextmanager, asynccontextmanager, AbstractAsyncContextManager
 
 from kivy.graphics import Translate, Rectangle, Color
 from kivy.core.window import Window, WindowBase
@@ -13,28 +14,22 @@ from kivy.uix.anchorlayout import AnchorLayout
 
 
 import asynckivy as ak
-from asynckivy import transform, StatefulEvent, anim_attrs_abbr as anim_attrs
+from asynckivy import anim_attrs_abbr as anim_attrs
 
 
 _default_bgcolor = (0., 0., 0., .8)
-Transition: TypeAlias = Callable[[Widget, 'KXPopupBackground', WindowBase], AACM[None]]
+Transition: TypeAlias = Callable[[Widget, 'KXPopupParent', WindowBase], AbstractAsyncContextManager]
 '''
 Defines how a popup appears and disappears.
 '''
 
 
-class KXPopupBackground(AnchorLayout):
-    '''
-    The real parent of a popup widget.
-    '''
-
-    __events__ = ('on_touch_down_outside_popup', )
-
-    # default value of an instance attribute
-    _block_inputs = False
-
-    def on_touch_down_outside_popup(self, touch):
-        pass
+class KXPopupParent(AnchorLayout):
+    '''(internal)'''
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._block_inputs = True
+        self.on_auto_dismiss: Callable[[str], None] = None
 
     @contextmanager
     def accept_inputs(self):
@@ -50,8 +45,8 @@ class KXPopupBackground(AnchorLayout):
         c = self.children[0]
         if c.collide_point(*touch.opos):  # AnchorLayout is not a relative-type widget, no need for translation
             c.dispatch('on_touch_down', touch)
-        else:
-            self.dispatch('on_touch_down_outside_popup', touch)
+        elif (f := self.on_auto_dismiss) is not None:
+            f('outside_touch')
         return True
 
     def on_touch_move(self, touch):
@@ -76,13 +71,13 @@ class NoTransition:
         self.background_color = background_color
 
     @asynccontextmanager
-    async def __call__(self, popup: Widget, bg: KXPopupBackground, parent: WindowBase):
-        bg_canvas = bg.canvas.before
+    async def __call__(self, popup: Widget, parent: KXPopupParent, window: WindowBase):
+        bg_canvas = parent.canvas.before
         try:
             with bg_canvas:
                 Color(*self.background_color)
                 rect = Rectangle()
-            with ak.sync_attr((bg, 'size'), (rect, 'size')):
+            with ak.sync_attr((parent, 'size'), (rect, 'size')):
                 yield
         finally:
             bg_canvas.clear()
@@ -95,23 +90,28 @@ class FadeTransition:
         self.background_color = background_color
 
     @asynccontextmanager
-    async def __call__(self, popup: Widget, bg: KXPopupBackground, parent: WindowBase):
-        bg_canvas = bg.canvas.before
+    async def __call__(self, popup: Widget, parent: KXPopupParent, window: WindowBase):
+        bg_canvas = parent.canvas.before
         try:
-            bg.opacity = 0
+            parent.opacity = 0
             with bg_canvas:
                 Color(*self.background_color)
                 rect = Rectangle()
-            with ak.sync_attr((bg, 'size'), (rect, 'size')):
-                await anim_attrs(bg, d=self.in_duration, opacity=1.0)
+            with ak.sync_attr((parent, 'size'), (rect, 'size')):
+                await anim_attrs(parent, d=self.in_duration, opacity=1.0)
                 yield
-                await anim_attrs(bg, d=self.out_duration, opacity=0.0)
+                await anim_attrs(parent, d=self.out_duration, opacity=0.0)
         finally:
-            bg.opacity = 1.0
+            parent.opacity = 1.0
             bg_canvas.clear()
 
 
 class SlideTransition:
+    '''
+    Slides the popup in and out from a given direction.
+
+    You cannot specify the out-direction, it is always the opposite of the in-direction.
+    '''
     def __init__(self, *, in_duration=.2, out_duration=.2, background_color=_default_bgcolor,
                  in_curve='out_back', out_curve='in_back',
                  in_direction: Literal['left', 'right', 'down', 'up']='down'):
@@ -123,22 +123,22 @@ class SlideTransition:
         self.in_direction = in_direction
 
     @asynccontextmanager
-    async def __call__(self, popup: Widget, bg: KXPopupBackground, parent: WindowBase):
-        bg_canvas = bg.canvas.before
+    async def __call__(self, popup: Widget, parent: KXPopupParent, window: WindowBase):
+        bg_canvas = parent.canvas.before
         try:
             bg_alpha = self.background_color[3]
             with bg_canvas:
                 color = Color(*self.background_color[:3], 0.)
                 rect = Rectangle()
             with (
-                ak.sync_attr((bg, 'size'), (rect, 'size')),
-                transform(popup, use_outer_canvas=True) as ig,
+                ak.sync_attr((parent, 'size'), (rect, 'size')),
+                ak.transform(popup, use_outer_canvas=True) as ig,
             ):
                 x_dist = y_dist = 0
                 if self.in_direction in ('up', 'down'):
-                    y_dist = (bg.height + popup.height) / 2
+                    y_dist = (parent.height + popup.height) / 2
                 else:
-                    x_dist = (bg.width + popup.width) / 2
+                    x_dist = (parent.width + popup.width) / 2
                 if self.in_direction in ('right', 'up'):
                     y_dist = -y_dist
                     x_dist = -x_dist
@@ -156,37 +156,59 @@ class SlideTransition:
             bg_canvas.clear()
 
 
-def _escape_key_or_back_button(window: WindowBase, key, *args):
+def _escape_key_or_back_button(on_auto_dismiss, window, key, *args):
     # https://github.com/kivy/kivy/issues/9075
-    return key in (27, 1073742106)
+    if key == 27:
+        on_auto_dismiss('escape_key')
+        return True
+    elif key == 1073742106:
+        on_auto_dismiss('back_button')
+        return True
 
 
 @asynccontextmanager
 async def open_popup(
-    popup: Widget, *, parent: WindowBase=Window, auto_dismiss: bool=True,
-    transition: Transition=FadeTransition(), _cache: list[KXPopupBackground]=[],
-) -> AsyncIterator[StatefulEvent]:
-    async with AsyncExitStack() as stack:
-        defer = stack.callback  # Because it works like Zig’s defer keyword.
-        aenter = stack.enter_async_context
+    popup: Widget, *, window: WindowBase=Window, auto_dismiss=True,
+    transition: Transition=FadeTransition(), _cache: list[KXPopupParent]=[],
+) -> AsyncIterator[ak.StatefulEvent]:
+    '''
+    Returns an async context manager that opens a popup.
 
-        bg = _cache.pop() if _cache else KXPopupBackground(); defer(_cache.append, bg)
-        bg.opacity = 0
-        bg.add_widget(popup); defer(bg.remove_widget, popup)
-        parent.add_widget(bg); defer(parent.remove_widget, bg)
+    :param popup: The popup widget to open.
+    :param window: The window to open the popup in.
+    :param auto_dismiss: Whether to dismiss the popup when the user clicks outside it or presses
+                         the escape key or back button.
+    :param transition: The transition to use when opening and dismissing the popup.
+
+    You can tell if the popup was auto-dismissed and what caused it as follows:
+
+    .. code-block::
+
+        async with open_popup(popup) as auto_dismiss_event:
+            ...
+        if auto_dismiss_event.is_fired:
+            print("The popup was auto-dismissed")
+
+            # 'outside_touch', 'escape_key' or 'back_button'
+            the_cause_of_auto_dismiss = auto_dismiss_event.params[0][0]
+    '''
+    async with AsyncExitStack() as stack:
+        defer = stack.callback  # Because it works like the defer keyword from other languages.
+
+        parent = _cache.pop() if _cache else KXPopupParent(); defer(_cache.append, parent)
+        parent.opacity = 0
+        parent.on_auto_dismiss = None
+        parent.add_widget(popup); defer(parent.remove_widget, popup)
+        window.add_widget(parent); defer(window.remove_widget, parent)
         await ak.sleep(0)  # Wait for the layout to complete
-        bg.opacity = 1.0
-        await aenter(transition(popup, bg, parent))
+        parent.opacity = 1.0
+
+        await stack.enter_async_context(transition(popup, parent, window))
+        ad_event = ak.StatefulEvent()  # 'ad' stands for 'auto dismiss'
         if auto_dismiss:
-            outside_touch_tracker = await aenter(ak.move_on_when(ak.event(bg, 'on_touch_down_outside_popup')))
-            keyboard_tracker = await aenter(ak.move_on_when(ak.event(
-                parent, 'on_keyboard', filter=_escape_key_or_back_button, stop_dispatching=True)))
-        with bg.accept_inputs():
-            ad_event = StatefulEvent()  # 'ad' stands for auto-dismiss
+            bind_id = window.fbind("on_keyboard", partial(_escape_key_or_back_button, ad_event.fire))
+            defer(window.unbind_uid, "on_keyboard", bind_id)
+            parent.on_auto_dismiss = ad_event.fire
+            await stack.enter_async_context(ak.move_on_when(ad_event.wait()))
+        with parent.accept_inputs():
             yield ad_event
-    if auto_dismiss:
-        if outside_touch_tracker.finished:
-            ad_event.fire('outside_touch')
-        elif keyboard_tracker.finished:
-            key = keyboard_tracker.result[1]
-            ad_event.fire('escape_key' if key == 27 else 'back_button')
