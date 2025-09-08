@@ -54,7 +54,7 @@ class ProgressBarPopup(BoxLayout):
 @asynccontextmanager
 async def open_progress_bar_popup(
     text: str, *, progress=0.,
-    parent: WindowBase=Window, transition: Transition=FadeTransition(), _cache=[],
+    window: WindowBase=Window, transition: Transition=FadeTransition(), _cache=[],
 ) -> AsyncIterator[ProgressBarPopup]:
     '''
     .. code-block::
@@ -66,7 +66,7 @@ async def open_progress_bar_popup(
     try:
         popup.goal_progress = popup.progress = progress
         popup.ids.label.text = text
-        async with open_popup(popup, parent=parent, auto_dismiss=False, transition=transition):
+        async with open_popup(popup, window=window, auto_dismiss=False, transition=transition):
             yield popup
     finally:
         _cache.append(popup)
@@ -115,12 +115,12 @@ def main():
 
                 async with ft():
                     label.text = res.json()['headers']['User-Agent']
-                popup.goal_progress = 0.9
+                # popup.goal_progress = 0.9
                 await ak.sleep(1)
 
                 async with ft():
                     label.text = "Time is flowing backward"
-                await ak.anim_attrs(popup, progress=.2)
+                await ak.anim_attrs(popup, progress=.1)
 
                 async with ft():
                     label.text = "Just kidding"

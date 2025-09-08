@@ -68,7 +68,7 @@ async def progress_spinner(
 
 @asynccontextmanager
 async def open_progress_spinner_popup(
-    text: str, *, parent: WindowBase=Window, transition: Transition=SlideTransition(), _cache=[],
+    text: str, *, window: WindowBase=Window, transition: Transition=SlideTransition(), _cache=[],
 ) -> AsyncIterator[ProgressSpinnerPopup]:
     '''
     .. code-block::
@@ -77,12 +77,11 @@ async def open_progress_spinner_popup(
             ...
     '''
     popup = _cache.pop() if _cache else ProgressSpinnerPopup()
-    # popup.cancelled = False
     try:
         popup.ids.label.text = text
         spinner_area = popup.ids.spinnner_area
         async with (
-            open_popup(popup, parent=parent, auto_dismiss=False, transition=transition),
+            open_popup(popup, window=window, auto_dismiss=False, transition=transition),
             ak.move_on_when(ak.event(popup.ids.cancel_button, 'on_release')) as cancel_tracker,
             ak.run_as_daemon(progress_spinner(
                 draw_target=spinner_area.canvas,

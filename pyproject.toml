@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [project]
 name = "asynckivy-ext-popup"
 version = "0.0.1.dev0"
-description = "Extension for AsyncKivy"
+description = "Helps you create custom popup widgets."
 authors = [
     {name = "Nattōsai Mitō",email = "flow4re2c@gmail.com"}
 ]
@@ -17,7 +17,7 @@ dependencies = [
     "kivy (>=2,<4)"
 ]
 classifiers = [
-    'Development Status :: 2 - Beta',
+    'Development Status :: 4 - Beta',
     'License :: OSI Approved :: MIT License',
     'Intended Audience :: Developers',
     'Programming Language :: Python',

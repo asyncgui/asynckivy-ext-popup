@@ -39,7 +39,7 @@ YesNoPopup = Factory.get('YesNoPopup')
 
 
 async def ask_yes_no_question(
-    question: str, *, parent: WindowBase=Window, yes_text='Yes', no_text='No',
+    question: str, *, window: WindowBase=Window, yes_text='Yes', no_text='No',
     transition: Transition=FadeTransition(), auto_dismiss=True, _cache=[],
 ) -> Awaitable[Literal['yes', 'no', None]]:
     '''
@@ -57,7 +57,7 @@ async def ask_yes_no_question(
         ids.question.text = question
         ids.yes_button.text = yes_text
         ids.no_button.text = no_text
-        async with open_popup(popup, parent=parent, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
+        async with open_popup(popup, window=window, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
             tasks = await ak.wait_any(
                 ak.event(ids.yes_button, 'on_release'),
                 ak.event(ids.no_button, 'on_release'),
