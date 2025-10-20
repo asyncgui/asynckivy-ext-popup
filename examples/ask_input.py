@@ -6,7 +6,7 @@ from kivy.factory import Factory
 from kivy.uix.textinput import TextInput
 
 import asynckivy as ak
-from asynckivy_ext.popup import open_popup, Transition, FadeTransition
+from asynckivy_ext.popup import open, Transition, FadeTransition
 
 
 Builder.load_string('''
@@ -66,7 +66,7 @@ async def ask_input(
         ti.input_filter = input_filter
         ti.input_type = input_type
         ti.focus = True
-        async with open_popup(popup, window=window, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
+        async with open(popup, window=window, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
             tasks = await ak.wait_any(
                 ak.event(ti, 'on_text_validate'),
                 ak.event(ids.ok_button, 'on_release'),

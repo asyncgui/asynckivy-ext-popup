@@ -7,7 +7,7 @@ from kivy.factory import Factory
 
 
 import asynckivy as ak
-from asynckivy_ext.popup import open_popup, Transition, SlideTransition
+from asynckivy_ext.popup import open, Transition, SlideTransition
 
 
 Builder.load_string('''
@@ -50,7 +50,7 @@ async def message_box(
         ids = popup.ids
         ids.msg.text = message
         ids.ok_button.text = ok_text
-        async with open_popup(popup, window=window, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
+        async with open(popup, window=window, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
             await ak.event(ids.ok_button, 'on_release')
         if ad_event.is_fired:
             return None

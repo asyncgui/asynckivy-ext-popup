@@ -1,5 +1,5 @@
 __all__ = (
-    'open_popup', 'Transition', 'NoTransition', 'FadeTransition', 'SlideTransition',
+    'open', 'Transition', 'NoTransition', 'FadeTransition', 'SlideTransition',
 )
 
 from typing import TypeAlias, Literal
@@ -167,7 +167,7 @@ def _escape_key_or_back_button(on_auto_dismiss, window, key, *args):
 
 
 @asynccontextmanager
-async def open_popup(
+async def open(
     popup: Widget, *, window: WindowBase=Window, auto_dismiss=True,
     transition: Transition=FadeTransition(), _cache: list[KXPopupParent]=[],
 ) -> AsyncIterator[ak.StatefulEvent]:
@@ -178,13 +178,13 @@ async def open_popup(
     :param window: The window to open the popup in.
     :param auto_dismiss: Whether to dismiss the popup when the user clicks outside it or presses
                          the escape key or back button.
-    :param transition: The transition to use when opening and dismissing the popup.
+    :param transition: The transition to use when the popup appears and disappears.
 
     You can tell if the popup was auto-dismissed and what caused it as follows:
 
     .. code-block::
 
-        async with open_popup(popup) as auto_dismiss_event:
+        async with open(popup) as auto_dismiss_event:
             ...
         if auto_dismiss_event.is_fired:
             print("The popup was auto-dismissed")
