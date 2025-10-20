@@ -8,7 +8,7 @@ from kivy.uix.boxlayout import BoxLayout
 
 
 import asynckivy as ak
-from asynckivy_ext.popup import open_popup, Transition, FadeTransition
+from asynckivy_ext.popup import open, Transition, FadeTransition
 
 
 Builder.load_string('''
@@ -66,7 +66,7 @@ async def open_progress_bar_popup(
     try:
         popup.goal_progress = popup.progress = progress
         popup.ids.label.text = text
-        async with open_popup(popup, window=window, auto_dismiss=False, transition=transition):
+        async with open(popup, window=window, auto_dismiss=False, transition=transition):
             yield popup
     finally:
         _cache.append(popup)

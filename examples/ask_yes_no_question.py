@@ -7,7 +7,7 @@ from kivy.factory import Factory
 
 
 import asynckivy as ak
-from asynckivy_ext.popup import open_popup, Transition, FadeTransition
+from asynckivy_ext.popup import open, Transition, FadeTransition
 
 
 Builder.load_string('''
@@ -57,7 +57,7 @@ async def ask_yes_no_question(
         ids.question.text = question
         ids.yes_button.text = yes_text
         ids.no_button.text = no_text
-        async with open_popup(popup, window=window, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
+        async with open(popup, window=window, auto_dismiss=auto_dismiss, transition=transition) as ad_event:
             tasks = await ak.wait_any(
                 ak.event(ids.yes_button, 'on_release'),
                 ak.event(ids.no_button, 'on_release'),

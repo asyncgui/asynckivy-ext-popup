@@ -9,7 +9,7 @@ from kivy.factory import Factory
 
 
 import asynckivy as ak
-from asynckivy_ext.popup import open_popup, Transition, SlideTransition
+from asynckivy_ext.popup import open, Transition, SlideTransition
 
 
 Builder.load_string('''
@@ -81,7 +81,7 @@ async def open_progress_spinner_popup(
         popup.ids.label.text = text
         spinner_area = popup.ids.spinnner_area
         async with (
-            open_popup(popup, window=window, auto_dismiss=False, transition=transition),
+            open(popup, window=window, auto_dismiss=False, transition=transition),
             ak.move_on_when(ak.event(popup.ids.cancel_button, 'on_release')) as cancel_tracker,
             ak.run_as_daemon(progress_spinner(
                 draw_target=spinner_area.canvas,
