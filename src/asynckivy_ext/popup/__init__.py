@@ -10,7 +10,7 @@ from contextlib import AsyncExitStack, contextmanager, asynccontextmanager, Abst
 from kivy.graphics import Translate, Rectangle, Color
 from kivy.core.window import Window, WindowBase
 from kivy.uix.widget import Widget
-from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.floatlayout import FloatLayout
 
 
 import asynckivy as ak
@@ -24,7 +24,7 @@ Defines how a popup appears and disappears.
 '''
 
 
-class KXPopupParent(AnchorLayout):
+class KXPopupParent(FloatLayout):
     '''(internal)'''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -43,7 +43,7 @@ class KXPopupParent(AnchorLayout):
         if self._block_inputs:
             return True
         c = self.children[0]
-        if c.collide_point(*touch.opos):  # AnchorLayout is not a relative-type widget, no need for translation
+        if c.collide_point(*touch.opos):  # FloatLayout is not a relative-type widget, no need for translation
             c.dispatch('on_touch_down', touch)
         elif (f := self.on_auto_dismiss) is not None:
             f('outside_touch')
@@ -94,6 +94,7 @@ class FadeTransition:
         bg_canvas = parent.canvas.before
         try:
             parent.opacity = 0
+            await ak.sleep(0)
             with bg_canvas:
                 Color(*self.background_color)
                 rect = Rectangle()
@@ -102,7 +103,6 @@ class FadeTransition:
                 yield
                 await anim_attrs(parent, d=self.out_duration, opacity=0.0)
         finally:
-            parent.opacity = 1.0
             bg_canvas.clear()
 
 
@@ -125,6 +125,8 @@ class SlideTransition:
     @asynccontextmanager
     async def __call__(self, popup: Widget, parent: KXPopupParent, window: WindowBase):
         bg_canvas = parent.canvas.before
+        parent.opacity = 0.
+        await ak.sleep(0)
         try:
             bg_alpha = self.background_color[3]
             with bg_canvas:
@@ -134,15 +136,20 @@ class SlideTransition:
                 ak.sync_attr((parent, 'size'), (rect, 'size')),
                 ak.transform(popup, use_outer_canvas=True) as ig,
             ):
-                x_dist = y_dist = 0
-                if self.in_direction in ('up', 'down'):
-                    y_dist = (parent.height + popup.height) / 2
-                else:
-                    x_dist = (parent.width + popup.width) / 2
-                if self.in_direction in ('right', 'up'):
-                    y_dist = -y_dist
-                    x_dist = -x_dist
+                x_dist = y_dist = 0.
+                match self.in_direction:
+                    case 'down':
+                        y_dist = parent.height - popup.y
+                    case 'up':
+                        y_dist = -popup.top
+                    case 'left':
+                        x_dist = parent.width - popup.x
+                    case 'right':
+                        x_dist = -popup.right
+                    case _:
+                        raise ValueError(f'Invalid in_direction: {self.in_direction}')
                 ig.add(mat := Translate(x_dist, y_dist))
+                parent.opacity = 1.
                 await ak.wait_all(
                     anim_attrs(mat, d=self.in_duration, t=self.in_curve, x=0, y=0),
                     anim_attrs(color, d=self.in_duration, a=bg_alpha),
@@ -196,12 +203,9 @@ async def open(
         defer = stack.callback  # Because it works like the defer keyword from other languages.
 
         parent = _cache.pop() if _cache else KXPopupParent(); defer(_cache.append, parent)
-        parent.opacity = 0
         parent.on_auto_dismiss = None
         parent.add_widget(popup); defer(parent.remove_widget, popup)
         window.add_widget(parent); defer(window.remove_widget, parent)
-        await ak.sleep(0)  # Wait for the layout to complete
-        parent.opacity = 1.0
 
         await stack.enter_async_context(transition(popup, parent, window))
         ad_event = ak.StatefulEvent()  # 'ad' stands for 'auto dismiss'
