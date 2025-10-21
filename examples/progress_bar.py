@@ -18,6 +18,7 @@ Builder.load_string('''
     orientation: 'vertical'
     size_hint: .5, .5
     size_hint_min: self.minimum_size
+    pos_hint: {'center_x': .5, 'center_y': .5}
     canvas.before:
         Color:
         Line:
