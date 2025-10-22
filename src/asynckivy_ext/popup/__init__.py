@@ -17,7 +17,8 @@ import asynckivy as ak
 from asynckivy import anim_attrs_abbr as anim_attrs
 
 
-_default_bgcolor = (0., 0., 0., .8)
+DARK = (0., 0., 0., .8)
+TRANSPARENT = (0., 0., 0., 0.)
 Transition: TypeAlias = Callable[[Widget, 'KXPopupParent', WindowBase], AbstractAsyncContextManager]
 '''
 Defines how a popup appears and disappears.
@@ -67,7 +68,7 @@ class KXPopupParent(FloatLayout):
 
 
 class NoTransition:
-    def __init__(self, *, background_color=_default_bgcolor):
+    def __init__(self, *, background_color=TRANSPARENT):
         self.background_color = background_color
 
     @asynccontextmanager
@@ -84,7 +85,7 @@ class NoTransition:
 
 
 class FadeTransition:
-    def __init__(self, *, in_duration=.1, out_duration=.1, background_color=_default_bgcolor):
+    def __init__(self, *, in_duration=.1, out_duration=.1, background_color=DARK):
         self.in_duration = in_duration
         self.out_duration = out_duration
         self.background_color = background_color
@@ -112,7 +113,7 @@ class SlideTransition:
 
     You cannot specify the out-direction, it is always the opposite of the in-direction.
     '''
-    def __init__(self, *, in_duration=.2, out_duration=.2, background_color=_default_bgcolor,
+    def __init__(self, *, in_duration=.2, out_duration=.2, background_color=DARK,
                  in_curve='out_back', out_curve='in_back',
                  in_direction: Literal['left', 'right', 'down', 'up']='down'):
         self.in_duration = in_duration
