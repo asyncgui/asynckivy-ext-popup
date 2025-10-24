@@ -29,7 +29,7 @@ class KXPopupParent(FloatLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._block_inputs = True
-        self.on_auto_dismiss: Callable[[str], None] = None
+        self.dismiss: Callable | None = None
 
     @contextmanager
     def accept_inputs(self):
@@ -45,8 +45,8 @@ class KXPopupParent(FloatLayout):
         c = self.children[0]
         if c.collide_point(*touch.opos):  # FloatLayout is not a relative-type widget, no need for translation
             c.dispatch('on_touch_down', touch)
-        elif (f := self.on_auto_dismiss) is not None:
-            f('outside_touch')
+        elif (f := self.dismiss) is not None:
+            f(cause='outside_touch')
         return True
 
     def on_touch_move(self, touch):
@@ -151,13 +151,13 @@ class SlideTransition:
             bg_canvas.clear()
 
 
-def _escape_key_or_back_button(on_auto_dismiss, window, key, *args):
+def _dismiss_when_escape_key_or_back_button_is_pressed(dismiss, window, key, *args):
     # https://github.com/kivy/kivy/issues/9075
     if key == 27:
-        on_auto_dismiss('escape_key')
+        dismiss(cause='escape_key')
         return True
     elif key == 1073742106:
-        on_auto_dismiss('back_button')
+        dismiss(cause='back_button')
         return True
 
 
@@ -185,22 +185,22 @@ async def open(
             print("The popup was auto-dismissed")
 
             # 'outside_touch', 'escape_key' or 'back_button'
-            the_cause_of_auto_dismiss = auto_dismiss_event.params[0][0]
+            cause_of_dismissal = auto_dismiss_event.params[1]['cause']
     '''
     async with AsyncExitStack() as stack:
         defer = stack.callback  # Because it works like the defer keyword from other languages.
 
         parent = _cache.pop() if _cache else KXPopupParent(); defer(_cache.append, parent)
-        parent.on_auto_dismiss = None
+        parent.dismiss = None
         parent.add_widget(popup); defer(parent.remove_widget, popup)
         window.add_widget(parent); defer(window.remove_widget, parent)
 
         await stack.enter_async_context(transition(popup, parent, window))
         ad_event = ak.StatefulEvent()  # 'ad' stands for 'auto dismiss'
         if auto_dismiss:
-            bind_id = window.fbind("on_keyboard", partial(_escape_key_or_back_button, ad_event.fire))
+            bind_id = window.fbind("on_keyboard", partial(_dismiss_when_escape_key_or_back_button_is_pressed, ad_event.fire))
             defer(window.unbind_uid, "on_keyboard", bind_id)
-            parent.on_auto_dismiss = ad_event.fire
+            parent.dismiss = ad_event.fire
             await stack.enter_async_context(ak.move_on_when(ad_event.wait()))
         with parent.accept_inputs():
             yield ad_event
