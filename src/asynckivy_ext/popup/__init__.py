@@ -1,5 +1,5 @@
 __all__ = (
-    'open', 'Transition', 'NoTransition', 'FadeTransition', 'SlideTransition',
+    'open', 'Transition', 'no_transition', 'FadeTransition', 'SlideTransition',
 )
 
 from typing import TypeAlias, Literal
@@ -18,7 +18,6 @@ from asynckivy import anim_attrs_abbr as anim_attrs
 
 
 DARK = (0., 0., 0., .8)
-TRANSPARENT = (0., 0., 0., 0.)
 Transition: TypeAlias = Callable[[Widget, 'KXPopupParent', WindowBase], AbstractAsyncContextManager]
 '''
 Defines how a popup appears and disappears.
@@ -67,21 +66,9 @@ class KXPopupParent(FloatLayout):
         return True
 
 
-class NoTransition:
-    def __init__(self, *, background_color=TRANSPARENT):
-        self.background_color = background_color
-
-    @asynccontextmanager
-    async def __call__(self, popup: Widget, parent: KXPopupParent, window: WindowBase):
-        bg_canvas = parent.canvas.before
-        try:
-            with bg_canvas:
-                Color(*self.background_color)
-                rect = Rectangle()
-            with ak.sync_attr((parent, 'size'), (rect, 'size')):
-                yield
-        finally:
-            bg_canvas.clear()
+@asynccontextmanager
+async def no_transition(popup: Widget, parent: KXPopupParent, window: WindowBase):
+    yield
 
 
 class FadeTransition:

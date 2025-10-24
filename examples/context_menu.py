@@ -5,7 +5,7 @@ from kivy.lang import Builder
 from kivy.factory import Factory
 
 import asynckivy as ak
-from asynckivy_ext.popup import open, NoTransition
+from asynckivy_ext.popup import open, no_transition
 
 
 Builder.load_string('''
@@ -42,7 +42,7 @@ Builder.load_string('''
 ContextMenu = Factory.get('ContextMenu')
 
 
-async def open_context_menu_at(pos, *, window: WindowBase=Window, _cache=[], _transition=NoTransition()):
+async def open_context_menu_at(pos, *, window: WindowBase=Window, _cache=[]):
     '''
     Opens a context menu at the given position, and waits for the user to select an item.
 
@@ -57,7 +57,7 @@ async def open_context_menu_at(pos, *, window: WindowBase=Window, _cache=[], _tr
     menu.x = pos[0]
     menu.top = pos[1]
     try:
-        async with open(menu, window=window, auto_dismiss=True, transition=_transition) as ad_event:
+        async with open(menu, window=window, auto_dismiss=True, transition=no_transition) as ad_event:
             tasks = await ak.wait_any(*[ak.event(c, 'on_press') for c in menu.children])
         if ad_event.is_fired:
             return None
