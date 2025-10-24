@@ -35,8 +35,8 @@ async with popup.open(msgbox):
     ...
 ```
 
-If you leave the context manager empty, the `msgbox` will close immediately — which is probably not what you want.
-To keep it open, you need to pause execution. For example:
+If you leave the with-block empty, the `msgbox` will be dismissed immediately — which is probably not what you want.
+To keep it open, you need to pause the execution of the coroutine. For example:
 
 ```python
 import asynckivy as ak
@@ -45,7 +45,8 @@ async with popup.open(msgbox):
     await ak.event(msgbox.ids.ok_button, 'on_release')
 ```
 
-If your popup doesn’t include a button and you want it to close when the user touches outside of it, you can simply sleep forever:
+If your popup doesn’t have a button that dismiss it, it's okay to sleep forever inside the with-block.
+The user can still dismiss the popup by touching outside of it or by pressing the escape key or the Android back button — unless `auto_dismiss` is set to False.
 
 ```python
 import asynckivy as ak
